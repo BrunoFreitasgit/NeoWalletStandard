@@ -1,2 +1,2 @@
 # NeoWalletStandard
-Implementation of NEP: Wallet Standard for NEO
+Proposal of implementation to the NEP6: Wallet Standard for NEO
