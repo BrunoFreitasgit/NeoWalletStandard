@@ -5,20 +5,56 @@ using Neo.Core;
 using Neo.Cryptography;
 using Neo.VM;
 using Neo.Wallets;
+using Newtonsoft.Json;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
-
 
 namespace Wallet
 {
     public class Account
     {
-        public string Address { get; }         // is the base58 encoded address of the account. AQLASLtT6pWbThcSCYU1biVqhMnzhTgLFq
-        public string Label { get; set; }        // is a label that the user has made to the account. 
-        public bool IsDefault { get; set; }                // indicates whether the account is the default change account. 
-        public bool IsLock { get; set; }                   // indicates whether the account is locked by user. The client shouldn't spend the funds in a locked account. 
-        public string Key { get; private set; }                                  // is the private key of the account in the NEP-2 format.This field can be null (for watch-only address or non-standard address). 6PYWB8m1bCnu5bQkRUKAwbZp2BHNvQ3BQRLbpLdTuizpyLkQPSZbtZfoxx
-        public Contract Contract { get; set; }         // is a Contract object which describes the details of the contract.
-        public object Extra { get; set; } = null;                   // is an object that is defined by the implementor of the client for storing extra data. This field can be null
+        /// <summary>
+        /// The base58 encoded address of the account 
+        /// e.g. AQLASLtT6pWbThcSCYU1biVqhMnzhTgLFq
+        /// </summary>
+        [JsonProperty("address")]
+        public string Address { get; }
+
+        /// <summary>
+        /// Label that the user has made to the account. 
+        /// </summary>
+        [JsonProperty("label")]
+        public string Label { get; set; }
+
+        /// <summary>
+        /// Indicates whether the account is the default change account.
+        /// </summary>
+        [JsonProperty("isDefault")]
+        public bool IsDefault { get; set; }
+
+        /// <summary>
+        /// Indicates whether the account is locked by user. The client shouldn't spend the funds in a locked account. 
+        /// </summary>
+        [JsonProperty("lock")]
+        public bool IsLock { get; set; }
+
+        /// <summary>
+        /// The private key of the account in the NEP-2 format. This field can be null (for watch-only address or non-standard address). 
+        /// e.g. 6PYWB8m1bCnu5bQkRUKAwbZp2BHNvQ3BQRLbpLdTuizpyLkQPSZbtZfoxx
+        /// </summary>
+        [JsonProperty("key")]
+        public string Key { get; private set; }
+
+        /// <summary>
+        /// Contract object which describes the details of the contract.
+        /// </summary>
+        [JsonProperty("contract")]
+        public Contract Contract { get; set; }
+
+        /// <summary>
+        /// An object that is defined by the implementor of the client for storing extra data. This field can be null
+        /// </summary>
+        [JsonProperty("extra")]
+        public object Extra { get; set; }
 
         protected Account(string address, string label, bool isDefault, bool isLock, string key)
         {
@@ -29,7 +65,7 @@ namespace Wallet
             Key = key;
         }
 
-        protected Account(string address, string label)
+        protected Account(string address, string label, object extra = null)
         {
             Address = address;
             Label = label;
@@ -37,30 +73,27 @@ namespace Wallet
             IsLock = true;
             Key = string.Empty;
             Contract = null;
-            Extra = null;
+            Extra = extra;
         }
 
-        public static Account Create(string label, bool isDefault, bool isLock, string passphrase, ScryptParameters scryptParameters)
+        public static Account Create(string label, bool isDefault, bool isLock, string passphrase,
+            ScryptParameters scryptParameters)
         {
             var keys = CreateKey();
             UInt160 scriptHash = CreateSignatureRedeemScript(keys.PublicKey).ToScriptHash();
-            string address = Neo.Wallets.Wallet.ToAddress(scriptHash);
+            string address = Wallet.ToAddress(scriptHash);
             string nepKey = Crypto.Nep2.EncryptKey(passphrase, keys, scryptParameters);
             Account createdAccount = new Account(address, label, isDefault, isLock, nepKey)
             {
-                Contract = new Contract
+                Contract = new Contract(scriptHash.ToString(), new[] //testing
                 {
-                    Deployed = false,
-                    Parameters = new[]
-                    {
-                        new Parameter("VerificationContract", ParameterType.Signature)
-                    },
-                    Script = scriptHash.ToString()
-                }
+                    new Parameter("operation", ParameterType.String),
+                    new Parameter("args", ParameterType.Array)
+                })
+
             };
             return createdAccount;
         }
-
 
         public static Account CreateWatchOnly(string address, string label)
         {

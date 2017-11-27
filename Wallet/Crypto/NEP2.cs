@@ -37,7 +37,7 @@ namespace Wallet.Crypto
             byte[] prikey = Xor(encryptedkey.Aes256Decrypt(derivedhalf2), derivedhalf1);
             ECPoint pubkey = ECCurve.Secp256r1.G * prikey;
             UInt160 scriptHash = Neo.SmartContract.Contract.CreateSignatureRedeemScript(pubkey).ToScriptHash();
-            string address = Neo.Wallets.Wallet.ToAddress(scriptHash);
+            string address = Wallet.ToAddress(scriptHash);
             if (!Encoding.ASCII.GetBytes(address).Sha256().Sha256().Take(4).SequenceEqual(addresshash))
                 throw new FormatException();
             return prikey;
@@ -53,7 +53,7 @@ namespace Wallet.Crypto
         public static string EncryptKey(string passphrase, KeyPair keyPair, ScryptParameters scryptParameters)
         {
             UInt160 scriptHash = Neo.SmartContract.Contract.CreateSignatureRedeemScript(keyPair.PublicKey).ToScriptHash();
-            string address = Neo.Wallets.Wallet.ToAddress(scriptHash);
+            string address = Wallet.ToAddress(scriptHash);
             byte[] addresshash = Encoding.ASCII.GetBytes(address).Sha256().Sha256().Take(4).ToArray();
             byte[] derivedkey = SCrypt.DeriveKey(Encoding.UTF8.GetBytes(passphrase), addresshash, scryptParameters.N, scryptParameters.R, scryptParameters.P, 64);
             byte[] derivedhalf1 = derivedkey.Take(32).ToArray();
